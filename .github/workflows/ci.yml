@@ -54,9 +54,6 @@ jobs:
       - name: Build proto files
         run: task --taskfile HailowProto/Taskfile.yml build_go
 
-      - name: Run tests
-        run: go test ./cmd/... ./internal/... ./pkg/...
-
       - name: Build server
         run: go build ./cmd/server
   tests:

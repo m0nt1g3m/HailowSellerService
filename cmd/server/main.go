@@ -35,7 +35,7 @@ func main() {
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Invalid SELLER_SERVICE_PORT value '%s':"))
+		slog.Error(fmt.Sprintf("Invalid SELLER_SERVICE_PORT value '%s': %v", portStr, err))
 	}
 
 	srv, err := server.New(debug, host, port)
