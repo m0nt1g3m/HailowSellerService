@@ -1,0 +1,57 @@
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  MIGRATIONS_PATH: './migrations'
+  DATABASE_URL: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.POSTGRES_DB}}?sslmode=disable'
+  DEV_DATABASE_URL: 'postgres://{{.DEV_POSTGRES_USER}}:{{.DEV_POSTGRES_PASSWORD}}@{{.DEV_POSTGRES_HOST}}:{{.DEV_POSTGRES_PORT}}/{{.DEV_POSTGRES_DB}}?sslmode=disable'
+
+tasks:
+  update-submodules:
+    desc: Updates all Git submodules recursively to their latest remote commits and merges changes.
+    cmds:
+      - git submodule update --remote --merge --recursive
+
+  create_migration:
+    desc: Create a new migration file
+    cmds:
+      - mkdir -p {{.MIGRATIONS_PATH}}
+      - migrate create -ext=sql -dir={{.MIGRATIONS_PATH}} -seq {{.CLI_ARGS}}
+
+  migrate_up:
+    desc: Run all pending migrations or N steps
+    cmds:
+      - mkdir -p {{.MIGRATIONS_PATH}}
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DATABASE_URL}}" -verbose up {{.CLI_ARGS}}
+  
+  dev_migrate_up:
+    desc: Run all pending migrations or N steps for development
+    cmds:
+      - mkdir -p {{.MIGRATIONS_PATH}}
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DEV_DATABASE_URL}}" -verbose up {{.CLI_ARGS}}
+
+  migrate_down:
+    desc: Rollback migrations down N steps
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DATABASE_URL}}" -verbose down {{.CLI_ARGS}}
+
+  dev_migrate_down:
+    desc: Rollback migrations down N steps for development
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DEV_DATABASE_URL}}" -verbose down {{.CLI_ARGS}}
+
+  force_migrate_down:
+    desc: Force migration version
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DATABASE_URL}}" force 1
+  
+  dev_force_migrate_down:
+    desc: Force migration version for development
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database "{{.DEV_DATABASE_URL}}" force 1
+
+  build_proto:
+    desc: Build proto files for Go.
+    cmds:
+      - cd HailowProto && task build_go
