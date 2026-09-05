@@ -22,6 +22,8 @@ type AuthUseCase struct {
 type IAuthUseCase interface {
 	SignUp(ctx context.Context, input *domain.SellerInfo) (*domain.Seller, error)
 	SignIn(ctx context.Context, input *domain.SellerInfo) (*domain.AuthInfo, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (string, error)
+	ValidateAccessToken(ctx context.Context, accessToken string) error
 }
 
 type jwtClaims struct {
@@ -84,4 +86,50 @@ func (u *AuthUseCase) SignIn(ctx context.Context, input *domain.SellerInfo) (*do
 		SellerID:  seller.ID,
 		TokenPair: tokens,
 	}, nil
+}
+
+func (u *AuthUseCase) RefreshTokens(ctx context.Context, refreshToken string) (string, error) {
+	if refreshToken == "" {
+		return "", domain.ErrRefreshTokenNotFound
+	}
+
+	session, err := u.repo.GetSessionByToken(ctx, refreshToken)
+	if err != nil {
+		return "", domain.ErrUnauthorized
+	}
+
+	if session.IsExpired() {
+		_ = u.repo.DeleteSession(ctx, refreshToken)
+		return "", domain.ErrUnauthorized
+	}
+
+	seller, err := u.sellerRepo.GetSellerByID(ctx, session.SellerID)
+
+	if err != nil {
+		return "", domain.ErrSellerNotFound
+	}
+
+	accessToken, err := u.generateAccessToken(time.Now(), seller)
+
+	if err != nil {
+		return "", domain.ErrGenAccessToken
+	}
+
+	return accessToken, nil
+}
+
+func (u *AuthUseCase) ValidateAccessToken(ctx context.Context, accessToken string) error {
+	claims, err := u.ParseAccessToken(accessToken)
+
+	if err != nil {
+		return domain.ErrUnauthorized
+	}
+
+	_, err = u.sellerRepo.GetSellerByID(ctx, claims.ID)
+
+	if err != nil {
+		return domain.ErrSellerNotFound
+	}
+
+	return nil
 }

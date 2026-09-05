@@ -13,35 +13,13 @@ import (
 func (u *AuthUseCase) generateTokenPair(ctx context.Context, seller *domain.Seller) (*domain.TokenPair, error) {
 	now := time.Now()
 
-	accessClaims := jwtClaims{
-		ID:               uuid.MustParse(seller.ID),
-		Email:            seller.Email,
-		OrganizationForm: string(seller.OrganizationForm),
-		TokenType:        "access",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
-	}
-
-	accessTokenStr, err := u.generateAccessToken(accessClaims)
+	accessTokenStr, err := u.generateAccessToken(now, seller)
 
 	if err != nil {
 		return nil, err
 	}
 
-	refreshClaims := jwtClaims{
-		ID:               uuid.MustParse(seller.ID),
-		Email:            seller.Email,
-		OrganizationForm: string(seller.OrganizationForm),
-		TokenType:        "refresh",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
-	}
-
-	refreshTokenStr, err := u.generateRefreshToken(refreshClaims)
+	refreshTokenStr, err := u.generateRefreshToken(now, seller)
 
 	if err != nil {
 		return nil, err
@@ -64,13 +42,33 @@ func (u *AuthUseCase) generateTokenPair(ctx context.Context, seller *domain.Sell
 	}, nil
 }
 
-func (u *AuthUseCase) generateAccessToken(claims jwtClaims) (string, error) {
+func (u *AuthUseCase) generateAccessToken(now time.Time, seller *domain.Seller) (string, error) {
+	claims := jwtClaims{
+		ID:               uuid.MustParse(seller.ID),
+		Email:            seller.Email,
+		OrganizationForm: string(seller.OrganizationForm),
+		TokenType:        "access",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+	}
 	accessTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessTokenStr, err := accessTokenObj.SignedString(u.getAccessSigningKey())
 	return accessTokenStr, err
 }
 
-func (u *AuthUseCase) generateRefreshToken(claims jwtClaims) (string, error) {
+func (u *AuthUseCase) generateRefreshToken(now time.Time, seller *domain.Seller) (string, error) {
+	claims := jwtClaims{
+		ID:               uuid.MustParse(seller.ID),
+		Email:            seller.Email,
+		OrganizationForm: string(seller.OrganizationForm),
+		TokenType:        "refresh",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(7 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+	}
 	refreshTokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	refreshTokenStr, err := refreshTokenObj.SignedString(u.getRefreshSigningKey())
 	return refreshTokenStr, err
@@ -90,4 +88,24 @@ func (u *AuthUseCase) getRefreshSigningKey() []byte {
 	}
 
 	return []byte("secret")
+}
+
+func (u *AuthUseCase) ParseAccessToken(tokenStr string) (*jwtClaims, error) {
+	var claims jwtClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, domain.ErrUnauthorized
+		}
+		return u.getAccessSigningKey(), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, domain.ErrUnauthorized
+	}
+
+	if claims.TokenType != "" && claims.TokenType != "access" {
+		return nil, domain.ErrUnauthorized
+	}
+
+	return &claims, nil
 }

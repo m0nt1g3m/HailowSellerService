@@ -40,3 +40,12 @@ func (u *ProfileUseCase) GetProfile(ctx context.Context, id string) (*domain.Sel
 
 	return seller, nil
 }
+
+// func (u *ProfileUseCase) (ctx context.Context, id string) (*domain.Seller, error) {
+// 	claims, err := auth.ParseAccessToken(id)
+
+// 	if err != nil {
+// 		return nil, domain.ErrUnauthorized
+// 	}
+
+// }

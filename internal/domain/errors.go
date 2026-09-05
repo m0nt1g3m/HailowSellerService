@@ -48,4 +48,9 @@ var (
 	ErrLogoUploadFailed      = &Error{Code: "logo_upload_failed", Message: "Failed to upload logo"}
 	ErrLogoUploadUnavailable = &Error{Code: "logo_upload_unavailable", Message: "Logo upload is unavailable"}
 	ErrInvalidRequest        = &Error{Code: "invalid_auth_request", Message: "Invalid auth request"}
+	ErrRefreshTokenMD        = &Error{Code: "refresh_token_not_found_md", Message: "refresh-token not found in metadata"}
+	ErrSellerIDNotFoundMD    = &Error{Code: "seller_id_not_found_md", Message: "seller-id not found in metadata"}
+	ErrPermissionDenied      = &Error{Code: "permission_denied", Message: "Permission denied"}
+	ErrMDNotFound            = &Error{Code: "metadata_not_found", Message: "Metadata not found"}
+	ErrGenAccessToken        = &Error{Code: "failed_gen_access_token", Message: "Failed generate access token"}
 )

@@ -16,6 +16,7 @@ import (
 	redis_repository "HailowSellerService/internal/infrastructure/redis/repository"
 	"HailowSellerService/internal/repository"
 	"HailowSellerService/internal/transport/grpc/handlers"
+	"HailowSellerService/internal/transport/grpc/interceptors"
 	"HailowSellerService/internal/usecase/auth"
 	"HailowSellerService/internal/usecase/profile"
 	"HailowSellerService/pkg/database"
@@ -108,7 +109,12 @@ func New(debug bool, host string, port int) (*Server, error) {
 	profileUseCase := profile.NewProfileUseCase(sellerRepo)
 	profileHandler := handlers.NewProfileHandler(profileUseCase, logger)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		interceptors.RecoveryInterceptor(logger),
+		interceptors.RefreshTokenInterceptor(logger),
+		interceptors.AuthInterceptor(logger),
+		interceptors.LoggingInterceptor(logger),
+	))
 
 	pb.RegisterSellerServiceServer(grpcServer, authHandler)
 	pb.RegisterSellerProfileServiceServer(grpcServer, profileHandler)
